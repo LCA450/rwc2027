@@ -1,0 +1,23 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Results editor</title>
+<style>body{font-family:system-ui,sans-serif;max-width:860px;margin:0 auto;padding:18px;background:#F4F1EC;color:#1A1814}h1{font-size:22px}label{font-size:12px;font-weight:700;display:block;margin-top:8px}select,input,textarea{padding:7px;border:1px solid #ccc;border-radius:6px;font:inherit}input[type=number]{width:80px}textarea{width:100%;font:12px monospace}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}button{padding:8px 14px;border:0;border-radius:7px;background:#176B48;color:#fff;font-weight:700;cursor:pointer}button.g{background:#fff;color:#1A1814;border:1px solid #ccc}table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px}td,th{padding:5px 6px;border-bottom:1px solid #ddd;text-align:left}.n{color:#666;font-size:12px}</style></head><body>
+<h1>Results editor</h1>
+<p class="n">Enter final scores (and tries, so bonus points work). Copy the JSON into <b>results.json</b> in your GitHub repository and commit. The live site picks it up within a couple of minutes. Nothing is saved here.</p>
+<div class="row"><div><label>Match</label><select id="m"></select></div><div><label id="l1">Team 1 points</label><input type="number" id="s1" min="0"></div><div><label id="l2">Team 2 points</label><input type="number" id="s2" min="0"></div><div><label>Team 1 tries</label><input type="number" id="t1" min="0"></div><div><label>Team 2 tries</label><input type="number" id="t2" min="0"></div><div><label><input type="checkbox" id="live"> In progress (not final)</label></div><div><label>If level after extra time (knockouts), winner</label><select id="w"><option value="">none</option><option value="1">Team 1</option><option value="2">Team 2</option></select></div></div>
+<p><button id="add">Add / update result</button> <button class="g" id="del">Remove this match's result</button> <button class="g" id="load">Load current results.json</button></p>
+<table id="tb"><thead><tr><th>#</th><th>Match</th><th>Score</th><th>Tries</th><th></th></tr></thead><tbody></tbody></table>
+<label>results.json (copy this)</label><textarea id="out" rows="10" readonly></textarea><p><button id="copy">Copy JSON</button></p>
+<script src="../assets/rwc-core.js"></script>
+<script>
+const R={};const $=id=>document.getElementById(id);
+function label(m){return m.team1+' v '+m.team2}
+function fill(){const cur=$('m').value;$('m').innerHTML=matches.map(m=>'<option value="'+m.id+'">#'+m.id+' · '+label(m)+' · '+m.dow+' '+m.date+'</option>').join('');if(cur)$('m').value=cur;pick();}
+function pick(){const m=matches.find(x=>x.id==$('m').value);$('l1').textContent=m.team1+' points';$('l2').textContent=m.team2+' points';const r=R[m.id];$('s1').value=r?r.s1:'';$('s2').value=r?r.s2:'';$('t1').value=r&&r.t1!=null?r.t1:'';$('t2').value=r&&r.t2!=null?r.t2:'';$('live').checked=!!(r&&r.live);$('w').value=r&&r.w||'';}
+function render(){applyResults(R);fill();$('tb').querySelector('tbody').innerHTML=Object.keys(R).sort((a,b)=>a-b).map(id=>{const m=matches.find(x=>x.id==id),r=R[id];return '<tr><td>'+id+'</td><td>'+label(m)+'</td><td>'+r.s1+' – '+r.s2+(r.live?' (live)':'')+'</td><td>'+(r.t1!=null?r.t1+' – '+r.t2:'')+'</td><td></td></tr>'}).join('');
+ $('out').value=JSON.stringify({updated:new Date().toISOString(),results:R},null,1);}
+$('m').onchange=pick;
+$('add').onclick=()=>{const id=$('m').value,s1=+$('s1').value,s2=+$('s2').value;if($('s1').value===''||$('s2').value==='')return alert('Enter both scores');const r={s1,s2};if($('t1').value!==''&&$('t2').value!==''){r.t1=+$('t1').value;r.t2=+$('t2').value}if($('live').checked)r.live=true;if($('w').value)r.w=+$('w').value;R[id]=r;render();};
+$('del').onclick=()=>{delete R[$('m').value];render();};
+$('load').onclick=()=>fetch('../results.json?t='+Date.now()).then(r=>r.json()).then(j=>{Object.keys(R).forEach(k=>delete R[k]);Object.assign(R,j.results||{});render();}).catch(()=>alert('Could not load results.json (open this page from the live site, not from a file).'));
+$('copy').onclick=()=>{$('out').select();document.execCommand('copy');};
+render();
+</script></body></html>
